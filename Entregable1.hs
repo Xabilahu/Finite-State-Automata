@@ -89,8 +89,46 @@ pertenencia_aux (q,a,tau,sigma,y) word estActual porExaminar
                              else False
                              --Si no hay ni estados a los que transicionar ni estados por examinar, devolvemos False
 
-
 --AFD prueba: lenguaje palabras que empiezan por 'a' y terminan en 'bc'
 --([0,1,2,3,4],"abc",[(0,'a',1),(0,'b',4),(0,'c',4),(1,'a',1),(1,'b',2),(1,'c',1),(2,'a',1),(2,'b',2),(2,'c',3),(3,'a',1),(3,'b',2),(3,'c',1),(4,'a',4),(4,'b',4),(4,'c',4)],0,[3])
 --AFND prueba: lenguaje de las palabras que contienen aa pero no c.
 --([0,1,2],"abc",[(0,'a',0),(0,'b',0),(0,'a',1),(1,'a',2),(2,'a',2),(2,'b',2)],0,[2])
+
+determinista :: Af -> Bool
+determinista (q,a,tau,sigma,y)
+    | length tau == length [(qin,simb) | qin <- q, simb <- a] = True
+    --Generamos una lista con tantos componentes como transiciones debería haber desde cada estado si fuera AFD (tantas como simbolos contenga el alfabeto), si hay tantas transiciones en tau
+    --es AFD, sino es AFND.
+    | otherwise = False
+
+alcanzables :: Af -> Estado -> Estados
+alcanzables (q,a,tau,sigma,y) estActual = elim_repetidos [qf | (qin,simb,qf) <- tau, qin == estActual]
+--Se devuelve la lista con aquellos estados que aparecen como último elemento en las tuplas de tau en los que el primer elemento es estActual, eliminando aquellos estados que aparecen repetidos
+
+elim_repetidos :: (Eq t) => [t] -> [t]
+elim_repetidos [] = []
+elim_repetidos (x:s)
+    | x `elem` s = elim_repetidos s
+    --Si x está repetido en el resto de la lista no lo añadimos a la lista resultado
+    | otherwise = x : elim_repetidos s
+    --Si x no está repetido lo añadimos a la lista resultado
+
+aceptacion :: Af -> Estados
+aceptacion (q,a,tau,sigma,y) = elim_repetidos [qin | (qin,simb,qf) <- tau, qf `elem` y]
+--Se devuelve la lista con aquellos estados que aparecen como primer elemento en las tuplas de tau en los que el último elemento pertenece a y (estados de aceptación)
+
+simplificacion :: Af -> Af
+simplificacion (q,a,tau,sigma,y)
+    | determinista (q,a,tau,sigma,y) = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
+                                          let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
+                                          (estados,a,nuevoTau,sigma,y)
+    | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
+                     let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
+                     let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y)) True
+                     let tauFinal =
+                     (estadosFinales,a,tauFinal,sigma,y)
+
+eliminar :: Estados -> Estados -> Bool -> Estados
+eliminar x y incluirInicial
+    | incluirInicial =
+    | otherwise =
