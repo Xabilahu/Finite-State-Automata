@@ -91,6 +91,10 @@ pertenencia_aux (q,a,tau,sigma,y) word estActual porExaminar
 
 --AFD prueba: lenguaje palabras que empiezan por 'a' y terminan en 'bc'
 --([0,1,2,3,4],"abc",[(0,'a',1),(0,'b',4),(0,'c',4),(1,'a',1),(1,'b',2),(1,'c',1),(2,'a',1),(2,'b',2),(2,'c',3),(3,'a',1),(3,'b',2),(3,'c',1),(4,'a',4),(4,'b',4),(4,'c',4)],0,[3])
+--AFD prueba: lenguaje palabras que contienen exactamente dos "a" o un número par de "b"
+--([0,1,2,3,4,5,6,7],"abc",[(0,'a',1),(0,'b',4),(0,'c',0),(1,'a',2),(1,'b',5),(1,'c',1),(2,'a',3),(2,'b',6),(2,'c',2),(3,'a',3),(3,'b',7),(3,'c',3),(4,'a',5),(4,'b',1),(4,'c',4),(5,'a',6),(5,'b',1),(5,'c',5),(6,'a',7),(6,'b',2),(6,'c',6),(7,'a',7),(7,'b',3),(7,'c',7)],0,[0,1,2,3,6])
+--AFND prueba: lenguaje palabras que contienen exactamente dos "a" o un número par de "b"
+--([0,1,2,3,4,5,6,7,8],"abc",[(0,'a',8),(0,'a',1),(0,'b',4),(0,'c',0),(1,'a',2),(1,'b',5),(1,'c',1),(2,'a',3),(2,'b',6),(2,'c',2),(3,'a',3),(3,'b',7),(3,'c',3),(4,'a',5),(4,'b',1),(4,'c',4),(5,'a',6),(5,'b',1),(5,'c',5),(6,'a',7),(6,'b',2),(6,'c',6),(7,'a',7),(7,'b',3),(7,'c',7)],0,[0,1,2,3,6])
 --AFND prueba: lenguaje de las palabras que contienen aa pero no c.
 --([0,1,2],"abc",[(0,'a',0),(0,'b',0),(0,'a',1),(1,'a',2),(2,'a',2),(2,'b',2)],0,[2])
 
@@ -117,18 +121,18 @@ aceptacion :: Af -> Estados
 aceptacion (q,a,tau,sigma,y) = elim_repetidos [qin | (qin,simb,qf) <- tau, qf `elem` y]
 --Se devuelve la lista con aquellos estados que aparecen como primer elemento en las tuplas de tau en los que el último elemento pertenece a y (estados de aceptación)
 
-simplificacion :: Af -> Af
-simplificacion (q,a,tau,sigma,y)
-    | determinista (q,a,tau,sigma,y) = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
-                                          let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
-                                          (estados,a,nuevoTau,sigma,y)
-    | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
-                     let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
-                     let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y)) True
-                     let tauFinal =
-                     (estadosFinales,a,tauFinal,sigma,y)
+--simplificacion :: Af -> Af
+--simplificacion (q,a,tau,sigma,y)
+--    | determinista (q,a,tau,sigma,y) = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
+--                                          let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
+--                                          (estados,a,nuevoTau,sigma,y)
+--    | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
+--                     let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
+--                     let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y)) True
+--                     let tauFinal =
+--                     (estadosFinales,a,tauFinal,sigma,y)
 
-eliminar :: Estados -> Estados -> Bool -> Estados
-eliminar x y incluirInicial
-    | incluirInicial =
-    | otherwise =
+--eliminar :: Estados -> Estados -> Bool -> Estados
+--eliminar x y incluirInicial
+--    | incluirInicial =
+--    | otherwise =
