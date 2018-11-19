@@ -78,16 +78,11 @@ pertenencia_aux (q,a,tau,sigma,y) word estActual porExaminar
     --En este punto la palabra es vacía, no quedan elementos por examinar, y no estamos en un estado de aceptación, devolvemos False
     | (head word) `notElem` a = error "La palabra contiene algún símbolo no perteneciente al alfabeto."
     --Si el símbolo que vamos a comprobar no pertenece al alfabeto, lanzamos un error (no lo lanzamos antes, pues la palabra puede ser vacía y con head se lanza una interrupción)
-    | otherwise = do let lista = [qf | (qin,simb,qf) <- tau, (qin == estActual && simb == (head word))]
-    --En cualquier otro caso, quedan símbolos por comprobar, por tanto, nos quedamos con aquellos estados alcanzables con el siguiente símbolo a comprobar
-                     if (length lista > 0)
-                         then pertenencia_aux (q,a,tau,sigma,y) (tail word) (head lista) (porExaminar ++ (zip (tail lista) ([(tail word) | x <- [1..(length (tail lista))]])))
-                         --Si hay algún estado al que transicionar, transicionamos y guardamos los demás junto con la palabra que nos queda por computar
-                         else if (length porExaminar > 0)
-                             then pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
-                             --Si no hay estados a los que transicionar pero quedan estados por comprobar, comprobamos uno de ellos
-                             else False
-                             --Si no hay ni estados a los que transicionar ni estados por examinar, devolvemos False
+    | length lista > 0 = pertenencia_aux (q,a,tau,sigma,y) (tail word) (head lista) (porExaminar ++ (zip (tail lista) ([(tail word) | x <- [1..(length (tail lista))]])))
+    | length porExaminar > 0 = pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
+    | otherwise = False
+        where
+            lista = [qf | (qin,simb,qf) <- tau, (qin == estActual && simb == (head word))]
 
 --AFD prueba: lenguaje palabras que empiezan por 'a' y terminan en 'bc'
 --([0,1,2,3,4],"abc",[(0,'a',1),(0,'b',4),(0,'c',4),(1,'a',1),(1,'b',2),(1,'c',1),(2,'a',1),(2,'b',2),(2,'c',3),(3,'a',1),(3,'b',2),(3,'c',1),(4,'a',4),(4,'b',4),(4,'c',4)],0,[3])
@@ -121,18 +116,20 @@ aceptacion :: Af -> Estados
 aceptacion (q,a,tau,sigma,y) = elim_repetidos [qin | (qin,simb,qf) <- tau, qf `elem` y]
 --Se devuelve la lista con aquellos estados que aparecen como primer elemento en las tuplas de tau en los que el último elemento pertenece a y (estados de aceptación)
 
---simplificacion :: Af -> Af
---simplificacion (q,a,tau,sigma,y)
---    | determinista (q,a,tau,sigma,y) = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
---                                          let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
---                                          (estados,a,nuevoTau,sigma,y)
---    | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma) False
---                     let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
---                     let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y)) True
---                     let tauFinal =
---                     (estadosFinales,a,tauFinal,sigma,y)
-
---eliminar :: Estados -> Estados -> Bool -> Estados
---eliminar x y incluirInicial
---    | incluirInicial =
---    | otherwise =
+-- simplificacion :: Af -> Af
+-- simplificacion (q,a,tau,sigma,y)
+--     | determinista (q,a,tau,sigma,y) = do let estados = alcanzables (q,a,tau,sigma,y) sigma
+--                                           if (sigma `elem` estados)
+--                                               then
+--                                               else estados = sigma:estados
+--                                           let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem` estados)]
+--                                           let nuevoY = [qAct | qAct <- estados , qAct `elem` y]
+--                                           (estados,a,nuevoTau,sigma,nuevoY)
+--     | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma)
+--                      let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
+--                      let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y))
+--                      let tauFinal =
+--                      (estadosFinales,a,tauFinal,sigma,y)
+--
+-- eliminar :: Estados -> Estados -> Estados
+-- eliminar x y
