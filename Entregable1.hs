@@ -1,135 +1,120 @@
-type Simbolo = Char
-type Alfabeto = [Simbolo]
-type Palabra = [Simbolo]
-type Estado = Int
-type Estados = [Estado]
-type Transicion = (Estado, Simbolo, Estado)
-type Transiciones = [Transicion]
-type Af = (Estados, Alfabeto, Transiciones, Estado, Estados)
+import Tipos
+import Pruebas
 
-menu :: IO ()
-menu = do putStrLn "\n***Menú Principal***"
-          putStrLn "Elige una opción:"
-          putStrLn "1. Pertenencia de una palabra al lenguaje asociado a un AF."
-          putStrLn "2. Clasificación de un AF como AFD o AFND."
-          putStrLn "3. Simplificación de un AF."
-          putStrLn "4. Transformación de un AF en AFD."
-          putStrLn "5. Terminar."
-          putStr "\n   Opción: "
-          opcionStr <- getLine
-          let opcion = read opcionStr :: Integer
-          case opcion of
-              1 -> do tupla <- pedirPertenencia
-                      procesar_respuesta tupla
-              2 -> putStrLn "Funcionalidad a implementar en el entregable II."
-              3 -> putStrLn "Funcionalidad a implementar en el entregable II."
-              4 -> putStrLn "Funcionalidad a implementar en el entregable III."
-              5 -> return ()
-              otherwise -> do putStrLn "Opción incorrecta, se volverá a lanzar el menú.\n"
-                              menu
-
-submenu :: String -> String -> String -> IO String
-submenu x y z = do putStrLn ("\n***Submenú de " ++ x ++ "***")
-                   putStrLn "Elige una opción: "
-                   putStrLn ("1. " ++ y)
-                   putStrLn "2. Volver al menú principal."
-                   putStr "\n   Opción: "
-                   opcionStr <- getLine
-                   let opcion = read opcionStr :: Integer
-                   case opcion of
-                       1 -> do putStr z
-                               getLine
-                       2 -> return "No más palabras."
-                       otherwise -> do putStrLn "Opción incorrecta, se volverá a lanzar el submenú."
-                                       submenu x y z
-
-pedirPertenencia :: IO (Af,Palabra,Bool)
-pedirPertenencia = do putStr "\n\nIntroduzca el AF que define el lenguaje: "
-                      afStr <- getLine
-                      putStr "\nIntroduzca la palabra que quiera comprobar: "
-                      palabraStr <- getLine
-                      let af = read afStr :: Af
-                      let palabra = read palabraStr :: Palabra
-                      return (af,palabra,(pertenencia af palabra))
-
-procesar_respuesta :: (Af,Palabra,Bool) -> IO ()
-procesar_respuesta (af,palabra,pertenece) = do
-    if pertenece
-        then putStrLn "\n\nPalabra perteneciente al lenguaje definido por el AF.\n\n"
-        else putStrLn "\n\nPalabra no perteneciente al lenguaje definido por el AF.\n\n"
-    subOpt <- submenu ("pertenencia") ("Comprobar la pertenencia de otra palabra al lenguaje asociado al AF.") ("\nIntroduzca la sigiente palabra a comprobar: ")
-    if subOpt == "No más palabras."
-        then menu
-        else do let nuevaPalabra = read subOpt :: Palabra
-                let nuevoPertenece = pertenencia af nuevaPalabra
-                procesar_respuesta (af,nuevaPalabra,nuevoPertenece)
+----------------------Análisis del coste computacional----------------------
+--
+----------------------------------------------------------------------------
 
 pertenencia :: Af -> Palabra -> Bool
 pertenencia (q,a,tau,sigma,y) word = pertenencia_aux (q,a,tau,sigma,y) word sigma []
---La lista vacía representa los estados que quedan por examinar en caso de computar un AFND, con un AFD esa lista permanecerá vacía
+--La lista vacía representa los estados que quedan por examinar en caso de computar un AFND (se guardarán los estados y la palabra que quedaba por computar en cada uno)
+--En caso de computar un AFD esa lista permanecerá vacía
 
 pertenencia_aux :: Af -> Palabra -> Estado -> [(Estado,Palabra)] -> Bool
 pertenencia_aux (q,a,tau,sigma,y) word estActual porExaminar
-    | length word == 0 && estActual `elem` y = True
+    | longitudWord == 0 && estActual `elem` y = True
     --Si la palabra es vacía y estamos en un estado de aceptación devolvemos True
-    | length word == 0 && length porExaminar > 0 = pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
+    | longitudWord == 0 && longitudPorExaminar > 0 = pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
     --Si la palabra es vacía y quedan elementos por examinar, comprobamos si ese elemento devuelve True volviendo a llamar a pertenencia_aux
-    | length word == 0 = False
+    | longitudWord == 0 = False
     --En este punto la palabra es vacía, no quedan elementos por examinar, y no estamos en un estado de aceptación, devolvemos False
     | (head word) `notElem` a = error "La palabra contiene algún símbolo no perteneciente al alfabeto."
     --Si el símbolo que vamos a comprobar no pertenece al alfabeto, lanzamos un error (no lo lanzamos antes, pues la palabra puede ser vacía y con head se lanza una interrupción)
     | length lista > 0 = pertenencia_aux (q,a,tau,sigma,y) (tail word) (head lista) (porExaminar ++ (zip (tail lista) ([(tail word) | x <- [1..(length (tail lista))]])))
-    | length porExaminar > 0 = pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
+    --Si hay algún estado al que transicionar, transicionamos y guardamos los demás junto con la palabra que nos queda por computar
+    | longitudPorExaminar > 0 = pertenencia_aux (q,a,tau,sigma,y) (snd(head porExaminar)) (fst(head porExaminar)) (tail porExaminar)
+    --Si no hay estados a los que transicionar pero quedan estados por comprobar, comprobamos uno de ellos
     | otherwise = False
-        where
-            lista = [qf | (qin,simb,qf) <- tau, (qin == estActual && simb == (head word))]
+    --Si no hay ni estados a los que transicionar ni estados por examinar, devolvemos False
+    where
+        lista = [qf | (qin,simb,qf) <- tau, (qin == estActual && simb == (head word))]
+        --lista contiene los estados a los que se puede transicionar desde estActual con head word
+        longitudWord = length word
+        --longitud de la palabra que queda por computar
+        longitudPorExaminar = length porExaminar
+        --longitud de la lista de elementos por examinar 
 
---AFD prueba: lenguaje palabras que empiezan por 'a' y terminan en 'bc'
---([0,1,2,3,4],"abc",[(0,'a',1),(0,'b',4),(0,'c',4),(1,'a',1),(1,'b',2),(1,'c',1),(2,'a',1),(2,'b',2),(2,'c',3),(3,'a',1),(3,'b',2),(3,'c',1),(4,'a',4),(4,'b',4),(4,'c',4)],0,[3])
---AFD prueba: lenguaje palabras que contienen exactamente dos "a" o un número par de "b"
---([0,1,2,3,4,5,6,7],"abc",[(0,'a',1),(0,'b',4),(0,'c',0),(1,'a',2),(1,'b',5),(1,'c',1),(2,'a',3),(2,'b',6),(2,'c',2),(3,'a',3),(3,'b',7),(3,'c',3),(4,'a',5),(4,'b',1),(4,'c',4),(5,'a',6),(5,'b',1),(5,'c',5),(6,'a',7),(6,'b',2),(6,'c',6),(7,'a',7),(7,'b',3),(7,'c',7)],0,[0,1,2,3,6])
---AFND prueba: lenguaje palabras que contienen exactamente dos "a" o un número par de "b"
---([0,1,2,3,4,5,6,7,8],"abc",[(0,'a',8),(0,'a',1),(0,'b',4),(0,'c',0),(1,'a',2),(1,'b',5),(1,'c',1),(2,'a',3),(2,'b',6),(2,'c',2),(3,'a',3),(3,'b',7),(3,'c',3),(4,'a',5),(4,'b',1),(4,'c',4),(5,'a',6),(5,'b',1),(5,'c',5),(6,'a',7),(6,'b',2),(6,'c',6),(7,'a',7),(7,'b',3),(7,'c',7)],0,[0,1,2,3,6])
---AFND prueba: lenguaje de las palabras que contienen aa pero no c.
---([0,1,2],"abc",[(0,'a',0),(0,'b',0),(0,'a',1),(1,'a',2),(2,'a',2),(2,'b',2)],0,[2])
+casosDePrueba :: IO ()
+casosDePrueba = do putStrLn "-----Pruebas AFD-----\n"
+                   casoPrueba1
+                   casoPrueba2
+                   casoPrueba3
+                   casoPrueba4
+                   casoPrueba5
+                   putStrLn "-----Pruebas AFND-----\n"
+                   casoPrueba6
+                   casoPrueba7
+                   casoPrueba8
+                   casoPrueba9
+                   casoPrueba10
 
-determinista :: Af -> Bool
-determinista (q,a,tau,sigma,y)
-    | length tau == length [(qin,simb) | qin <- q, simb <- a] = True
-    --Generamos una lista con tantos componentes como transiciones debería haber desde cada estado si fuera AFD (tantas como simbolos contenga el alfabeto), si hay tantas transiciones en tau
-    --es AFD, sino es AFND.
-    | otherwise = False
+casoPrueba1 :: IO ()
+casoPrueba1 = do putStrLn "-----Caso de prueba 1-----"
+                 putStrLn "Lenguaje de las palabras que terminan con 'a'\n"
+                 if (pertenencia getAutomataD "abc") 
+                     then putStrLn "Incorrecto, abc no pertenece\n\n"
+                     else putStrLn "Correcto, abc no pertenece\n\n"
 
-alcanzables :: Af -> Estado -> Estados
-alcanzables (q,a,tau,sigma,y) estActual = elim_repetidos [qf | (qin,simb,qf) <- tau, qin == estActual]
---Se devuelve la lista con aquellos estados que aparecen como último elemento en las tuplas de tau en los que el primer elemento es estActual, eliminando aquellos estados que aparecen repetidos
+casoPrueba2 :: IO ()
+casoPrueba2 = do putStrLn "-----Caso de prueba 2-----"
+                 putStrLn "Lenguaje de las palabras que terminan con 'a'\n"
+                 if (pertenencia getAutomataD "abca") 
+                    then putStrLn "Correcto, abca pertenece\n\n"
+                    else putStrLn "Incorrecto, abca pertenece\n\n"
 
-elim_repetidos :: (Eq t) => [t] -> [t]
-elim_repetidos [] = []
-elim_repetidos (x:s)
-    | x `elem` s = elim_repetidos s
-    --Si x está repetido en el resto de la lista no lo añadimos a la lista resultado
-    | otherwise = x : elim_repetidos s
-    --Si x no está repetido lo añadimos a la lista resultado
+casoPrueba3 :: IO ()
+casoPrueba3 = do putStrLn "-----Caso de prueba 3-----"
+                 putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                 if (pertenencia getAutomataD3 "bbaba") 
+                     then putStrLn "Correcto, bbaba pertenece\n\n"
+                     else putStrLn "Incorrecto, bbaba pertenece\n\n"
 
-aceptacion :: Af -> Estados
-aceptacion (q,a,tau,sigma,y) = elim_repetidos [qin | (qin,simb,qf) <- tau, qf `elem` y]
---Se devuelve la lista con aquellos estados que aparecen como primer elemento en las tuplas de tau en los que el último elemento pertenece a y (estados de aceptación)
+casoPrueba4 :: IO ()
+casoPrueba4 = do putStrLn "-----Caso de prueba 4-----"
+                 putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                 if (pertenencia getAutomataD3 "bbaaab") 
+                     then putStrLn "Correcto, bbaaab pertenece\n\n"
+                     else putStrLn "Incorrecto, bbaaab pertenece\n\n"
 
--- simplificacion :: Af -> Af
--- simplificacion (q,a,tau,sigma,y)
---     | determinista (q,a,tau,sigma,y) = do let estados = alcanzables (q,a,tau,sigma,y) sigma
---                                           if (sigma `elem` estados)
---                                               then
---                                               else estados = sigma:estados
---                                           let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem` estados)]
---                                           let nuevoY = [qAct | qAct <- estados , qAct `elem` y]
---                                           (estados,a,nuevoTau,sigma,nuevoY)
---     | otherwise = do let estados = eliminar q (alcanzables (q,a,tau,sigma,y) sigma)
---                      let nuevoTau = [(qin,simb,qf) | (qin,simb,qf) <- tau, (qin `elem` estados && qf `elem`estados)]
---                      let estadosFinales = eliminar estados (aceptacion (q,a,tau,sigma,y))
---                      let tauFinal =
---                      (estadosFinales,a,tauFinal,sigma,y)
---
--- eliminar :: Estados -> Estados -> Estados
--- eliminar x y
+casoPrueba5 :: IO ()
+casoPrueba5 = do putStrLn "-----Caso de prueba 5-----"
+                 putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                 if (pertenencia getAutomataD3 "bbaaabca") 
+                     then putStrLn "Incorrecto, bbaaabca no pertenece\n\n"
+                     else putStrLn "Correcto, bbaaabca no pertenece\n\n"
+
+casoPrueba6 :: IO ()
+casoPrueba6 = do putStrLn "-----Caso de prueba 6-----"
+                 putStrLn "Lenguaje de las palabras que terminan con 'a'\n"
+                 if (pertenencia getAutomataN "abc") 
+                     then putStrLn "Incorrecto, abc no pertenece\n\n"
+                     else putStrLn "Correcto, abc no pertenece\n\n"
+
+casoPrueba7 :: IO ()
+casoPrueba7 = do putStrLn "-----Caso de prueba 7-----"
+                 putStrLn "Lenguaje de las palabras que terminan con 'a'\n"
+                 if (pertenencia getAutomataN "abca") 
+                     then putStrLn "Correcto, abca pertenece\n\n"
+                     else putStrLn "Incorrecto, abca pertenece\n\n"
+
+casoPrueba8 :: IO ()
+casoPrueba8 = do putStrLn "-----Caso de prueba 8-----"
+                 putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                 if (pertenencia getAutomataN4 "bbaba") 
+                     then putStrLn "Correcto, bbaba pertenece\n\n"
+                     else putStrLn "Incorrecto, bbaba pertenece\n\n"
+
+casoPrueba9 :: IO ()
+casoPrueba9 = do putStrLn "-----Caso de prueba 9-----"
+                 putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                 if (pertenencia getAutomataN4 "bbaaab") 
+                     then putStrLn "Correcto, bbaaab pertenece\n\n"
+                     else putStrLn "Incorrecto, bbaaab pertenece\n\n"
+
+casoPrueba10 :: IO ()
+casoPrueba10 = do putStrLn "-----Caso de prueba 10-----"
+                  putStrLn "Lenguaje de las palabras que contienen 'aaa' o terminan en 'a' y, además, no contienen 'c'\n"
+                  if (pertenencia getAutomataN4 "bbaaabca") 
+                     then putStrLn "Incorrecto, bbaaabca no pertenece\n\n"
+                     else putStrLn "Correcto, bbaaabca no pertenece\n\n"
+                     
