@@ -13,7 +13,7 @@ determinista (q,a,tau,sigma,y)
     | otherwise = False
 
 alcanzables :: Af -> Estado -> Estados
-alcanzables (q,a,tau,sigma,y) estActual = alcanzables_aux (q,a,tau,sigma,y) estActual [] [] [estActual]
+alcanzables (q,a,tau,sigma,y) estActual = ms_rf (alcanzables_aux (q,a,tau,sigma,y) estActual [] [] [qf | (qin,simb,qf) <- tau, qin == estActual])
 --Se devuelve la lista de todos los estados que se pueden alcanzar desde es estado estActual.
 
 alcanzables_aux :: Af -> Estado -> Estados -> Estados -> Estados -> Estados
@@ -48,6 +48,26 @@ iterarEstAceptacion :: Estado -> Af -> Bool
 --pues se estaría calculando una vez por cada elemento de y.
 iterarEstAceptacion x (q,a,tau,sigma,y) = length [z | z <- y, z `elem` alcanzablesDesde] > 0
     where alcanzablesDesde = alcanzables (q,a,tau,sigma,y) x
+
+
+mezclar_aux::(Ord t, Eq t) => [t] -> [t] -> [t] -> [t]
+mezclar_aux [] r q = q ++ r
+mezclar_aux (x:s) r q | r == [] = q ++ (x:s)
+    | x <= (head r) = mezclar_aux s r (q ++ [x])
+    | otherwise = mezclar_aux (x:s) (tail r) (q ++ [head r])
+
+mezclar_rf:: (Ord t, Eq t) => [t] -> [t] -> [t]
+mezclar_rf r w = mezclar_aux r w []
+
+ms_aux :: (Ord t, Eq t) => [[t]] -> [t]
+ms_aux [] = []
+ms_aux (x:s)
+    | s == [] = x
+    | otherwise = ms_aux (q : (tail s))
+    where q = mezclar_rf x (head s)
+
+ms_rf :: (Ord t, Eq t) => [t] -> [t]
+ms_rf r = ms_aux [[y] | y <- r]
 
 simplificacion :: Af -> Af
 simplificacion (q,a,tau,sigma,y)
@@ -97,9 +117,6 @@ casosDePrueba = do putStrLn "-----Pruebas método determinista-----\n"
                    pruebaSimpl1
                    pruebaSimpl2
                    pruebaSimpl3
-                   pruebaSimpl4
-                   pruebaSimpl5
-                   pruebaSimpl6
 
 pruebaDet1 :: IO ()
 pruebaDet1 = do putStrLn "-----Caso de prueba 1-----"
@@ -133,15 +150,78 @@ pruebaDet5 = do putStrLn "-----Caso de prueba 5-----"
 
 pruebaAlc1 :: IO ()
 pruebaAlc1 = do putStrLn "-----Caso de prueba 1-----"
+                if ([0,1] == (alcanzables getAutomataD 0))
+                    then putStrLn "Correcto, los estados alcanzables desde el estado 0 del automataD son [0,1].\n\n"
+                    else putStrLn "Incorrecto, los estados alcanzables desde el estado 0 del automataD son [0,1].\n\n"
                 
 pruebaAlc2 :: IO ()
 pruebaAlc2 = do putStrLn "-----Caso de prueba 2-----"
+                if ([3,4] == (alcanzables getAutomataD2 3))
+                    then putStrLn "Correcto, los estados alcanzables desde el estado 3 del automataD2 son [3,4].\n\n"
+                    else putStrLn "Incorrecto, los estados alcanzables desde el estado 3 del automataD2 son [3,4].\n\n"
 
 pruebaAlc3 :: IO ()
 pruebaAlc3 = do putStrLn "-----Caso de prueba 3-----"
+                if ([3,4,9] == (alcanzables getAutomataD3s 3))
+                    then putStrLn "Correcto, los estados alcanzables desde el estado 3 del automataD3 son [3,4,9].\n\n"
+                    else putStrLn "Incorrecto, los estados alcanzables desde el estado 3 del automataD3 son [3,4,9].\n\n"
 
 pruebaAlc4 :: IO ()
 pruebaAlc4 = do putStrLn "-----Caso de prueba 4-----"
+                if ([] == (alcanzables getAutomataN 1))
+                    then putStrLn "Correcto, los estados alcanzables desde el estado 1 del automataN son [].\n\n"
+                    else putStrLn "Incorrecto, los estados alcanzables desde el estado 1 del automataN son [].\n\n"
 
 pruebaAlc5 :: IO ()
-pruebaAlc5 = do putStrLn "-----Caso de prueba 5-----"
+pruebaAlc5 = do putStrLn "-----Caso de prueba 5----"
+                if ([1,2,4,5,8] == (alcanzables getAutomataN3 3))
+                    then putStrLn "Correcto, los estados alcanzables desde el estado 3 del automataN3 son [1,2,4,5,8].\n\n"
+                    else putStrLn "Incorrecto, los estados alcanzables desde el estado 3 del automataN3 son [1,2,4,5,8].\n\n"
+
+pruebaAcep1 :: IO ()
+pruebaAcep1 = do putStrLn "-----Caso de prueba 1----"
+                 if ([0,1] == (aceptacion getAutomataD))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD son [0,1].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD son [0,1].\n\n"
+
+pruebaAcep2 :: IO ()
+pruebaAcep2 = do putStrLn "-----Caso de prueba 2----"
+                 if ([0,1,2,3] == (aceptacion getAutomataD2))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD2 son [0,1,2,3].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD2 son [0,1,2,3].\n\n"
+
+pruebaAcep3 :: IO ()
+pruebaAcep3 = do putStrLn "-----Caso de prueba 3----"
+                 if ([0,1,2,3] == (aceptacion getAutomataD3s))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD3s son [0,1,2,3].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataD3s son [0,1,2,3].\n\n"
+
+pruebaAcep4 :: IO ()
+pruebaAcep4 = do putStrLn "-----Caso de prueba 4----"
+                 if ([0] == (aceptacion getAutomataN))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0].\n\n"
+
+pruebaAcep5 :: IO ()
+pruebaAcep5 = do putStrLn "-----Caso de prueba 5----"
+                 if ([0,3,4,5,6,7,9,10] == (aceptacion getAutomataN3))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,9,10].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,9,10].\n\n"
+
+pruebaSimpl1 :: IO ()
+pruebaSimpl1 = do putStrLn "-----Caso de prueba 1 (Automata D3)-----"
+                  if (getAutomataD3s == (simplificacion getAutomataD3))
+                    then putStrLn "Correcto\n\n"
+                    else putStrLn "Incorrecto\n\n"                    
+
+pruebaSimpl2 :: IO ()
+pruebaSimpl2 = do putStrLn "-----Caso de prueba 2 (Automata N1)-----"
+                  if (getAutomataN1s == (simplificacion getAutomataN1))
+                    then putStrLn "Correcto\n\n"
+                    else putStrLn "Incorrecto\n\n"
+
+pruebaSimpl3 :: IO ()
+pruebaSimpl3 = do putStrLn "-----Caso de prueba 3 (Automata N3)-----"
+                  if (getAutomataN3s == (simplificacion getAutomataN3))
+                    then putStrLn "Correcto\n\n"
+                    else putStrLn "Incorrecto\n\n"
