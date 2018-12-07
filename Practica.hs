@@ -136,8 +136,8 @@ determinista (q,a,tau,sigma,y)
     | otherwise = False
 
 alcanzables :: Af -> Estado -> Estados
-alcanzables (q,a,tau,sigma,y) estActual = alcanzables_aux (q,a,tau,sigma,y) estActual [] [] [estActual]
---Se devuelve la lista de todos los estados que se pueden alcanzar desde es estado estActual.
+alcanzables (q,a,tau,sigma,y) estActual = ms_rf (alcanzables_aux (q,a,tau,sigma,y) estActual [] [] (elim_repetidos ([qf | (qin,simb,qf) <- tau, qin == estActual])))
+--Se devuelve la lista ordenada de todos los estados que se pueden alcanzar desde es estado estActual.
 
 alcanzables_aux :: Af -> Estado -> Estados -> Estados -> Estados -> Estados
 alcanzables_aux (q,a,tau,sigma,y) estActual examinados resultado porExaminar
@@ -160,10 +160,8 @@ elim_repetidos (x:s)
     --Si x no está repetido lo añadimos a la lista resultado.
 
 aceptacion :: Af -> Estados
-aceptacion (q,a,tau,sigma,y) = [x | x <- q, iterarEstAceptacion x (q,a,tau,sigma,y)] 
---Se devuelve la lista de todos los estados desde los cuales se puede alcanzar un estado de aceptación.
-
---([0,1,2,3,4],"abc",[(0,'a',1),(0,'a',2),(1,'b',3),(1,'c',4)],0,[4])
+aceptacion (q,a,tau,sigma,y) = ms_rf (elim_repetidos (y ++ [x | x <- q, iterarEstAceptacion x (q,a,tau,sigma,y)]))
+--Se devuelve la lista de todos los estados desde los cuales se puede alcanzar un estado de aceptación y los estados de aceptación.
 
 iterarEstAceptacion :: Estado -> Af -> Bool
 --Se crea una función auxiliar cuya función es dado un estado x y el Af , devuelve true si existe al menos un estado de aceptación alcanzable desde x.
@@ -171,6 +169,27 @@ iterarEstAceptacion :: Estado -> Af -> Bool
 --pues se estaría calculando una vez por cada elemento de y.
 iterarEstAceptacion x (q,a,tau,sigma,y) = length [z | z <- y, z `elem` alcanzablesDesde] > 0
     where alcanzablesDesde = alcanzables (q,a,tau,sigma,y) x
+
+-- Método sacado de los apuntes de LCSI, mergesort ---------------
+mezclar_aux::(Ord t, Eq t) => [t] -> [t] -> [t] -> [t]
+mezclar_aux [] r q = q ++ r
+mezclar_aux (x:s) r q | r == [] = q ++ (x:s)
+    | x <= (head r) = mezclar_aux s r (q ++ [x])
+    | otherwise = mezclar_aux (x:s) (tail r) (q ++ [head r])
+
+mezclar_rf:: (Ord t, Eq t) => [t] -> [t] -> [t]
+mezclar_rf r w = mezclar_aux r w []
+
+ms_aux :: (Ord t, Eq t) => [[t]] -> [t]
+ms_aux [] = []
+ms_aux (x:s)
+    | s == [] = x
+    | otherwise = ms_aux (q : (tail s))
+    where q = mezclar_rf x (head s)
+
+ms_rf :: (Ord t, Eq t) => [t] -> [t]
+ms_rf r = ms_aux [[y] | y <- r]
+------------------------------------------------------------------
 
 simplificacion :: Af -> Af
 simplificacion (q,a,tau,sigma,y)
