@@ -5,22 +5,38 @@ import Pruebas
 -- El coste computacional del método determinista, es el número de estados multiplicado 
 -- por el número de simbolos del alfabeto, O(estados*simbolos).
 
--- El coste computacional del método alcanzables en el peor de los casos es quasilineal 
--- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+-- El coste computacional del método alcanzables en el peor de los casos es 
+-- O(estados²*transiciones + estados*log₂(estados))
+-- En el peor caso, todos los estados son alcanzables, por tanto, se van a recorrer
+-- todos los estados del AF, y por cada uno se van a recorrer todas las transiciones
+-- del AF, y por cada transición se va a recorrer la lista de examinados (en un principio,
+-- dicha lista estará vacía y se irá incrementando hasta almacenar todos los estados, 
+-- como promedio se recorrerán estados/2).
 
--- El coste computacional del método elim_repetidos es lineal con respecto al numero de 
+-- El coste computacional del método elim_repetidos es cuadrático con respecto al numero de 
 -- elementos de la lista.
 
 -- El coste computacional del método ms_rf es quasilinial con respecto número de elementos a ordenar.
+-- Suponiendo que el número de elementos a ordenar es N, el coste sería O(N*log₂(N)).
 
--- El coste computacional del método aceptación en el peor de los casos es quasilineal 
--- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+-- El coste computacional del método aceptación es O(estados*alcanzables*estadosAceptación),
+-- donde alcanzables es el coste computacional de la función alcanzables.
 
--- El coste computacional del método simplificacion en el peor de los casos es quasilineal 
--- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+-- El coste computacional del método simplificación: 
 
--- En el peor de los casos de de los metódos anteriores se refiere a cuando se tienen que 
--- recorrer todos los estados, porque existan transciones que lleven a todos los estados
+-- Si es determinista, el coste sería O(alcanzables), porque el coste se calcula como la suma de calcular los nuevos estados,
+-- las nuevas transiciones y los nuevos estados de aceptación. Como calcular las nuevas transiciones
+-- y los nuevos estados de aceptación se consideran despreciables respecto a calcular los nuevos estados  
+-- porque se hace una llamada a alcanzables), el coste lo fija esa llamada alcanzables.
+
+-- En el caso de ser no determinista, el coste sería O(aceptación), pues el coste se calcula como la suma
+-- de calcular la simplificación de un automata determinista, los nuevos estados en base a los que tendría un
+-- automata determinista simplificado (se produce una llamada a aceptación), las nuevas transiciones
+-- en base a las transiciones que tendría un autómata determinista simplificado, y los nuevos estados de aceptación
+-- en base a los estados de aceptación que tendría un autómata determinista simplificado. Todos estos
+-- componentes se consideran despreciables respecto a calcular los nuevos estados porque se hace una llamada
+-- a aceptación.
+
 ----------------------------------------------------------------------------
 
 determinista :: Af -> Bool
@@ -31,9 +47,8 @@ determinista (q,a,tau,sigma,y)
     | otherwise = False
 
 alcanzables :: Af -> Estado -> Estados
-alcanzables (q,a,tau,sigma,y) estActual = ms_rf (alcanzables_aux (q,a,tau,sigma,y) estActual [] [] [qf | (qin,simb,qf) <- tau, qin == estActual])
+alcanzables (q,a,tau,sigma,y) estActual = ms_rf (alcanzables_aux (q,a,tau,sigma,y) estActual [] [] (elim_repetidos ([qf | (qin,simb,qf) <- tau, qin == estActual])))
 --Se devuelve la lista ordenada de todos los estados que se pueden alcanzar desde es estado estActual.
--- al final en la generacion de lista no se deberian de eliminar los repetidos??
 
 alcanzables_aux :: Af -> Estado -> Estados -> Estados -> Estados -> Estados
 alcanzables_aux (q,a,tau,sigma,y) estActual examinados resultado porExaminar
@@ -56,10 +71,8 @@ elim_repetidos (x:s)
     --Si x no está repetido lo añadimos a la lista resultado.
 
 aceptacion :: Af -> Estados
-aceptacion (q,a,tau,sigma,y) = [x | x <- q, iterarEstAceptacion x (q,a,tau,sigma,y)] 
---Se devuelve la lista de todos los estados desde los cuales se puede alcanzar un estado de aceptación.
-
---([0,1,2,3,4],"abc",[(0,'a',1),(0,'a',2),(1,'b',3),(1,'c',4)],0,[4])
+aceptacion (q,a,tau,sigma,y) = ms_rf (elim_repetidos (y ++ [x | x <- q, iterarEstAceptacion x (q,a,tau,sigma,y)]))
+--Se devuelve la lista de todos los estados desde los cuales se puede alcanzar un estado de aceptación y los estados de aceptación.
 
 iterarEstAceptacion :: Estado -> Af -> Bool
 --Se crea una función auxiliar cuya función es dado un estado x y el Af , devuelve true si existe al menos un estado de aceptación alcanzable desde x.
@@ -68,7 +81,7 @@ iterarEstAceptacion :: Estado -> Af -> Bool
 iterarEstAceptacion x (q,a,tau,sigma,y) = length [z | z <- y, z `elem` alcanzablesDesde] > 0
     where alcanzablesDesde = alcanzables (q,a,tau,sigma,y) x
 
-
+-- Método sacado de los apuntes de LCSI, mergesort ---------------
 mezclar_aux::(Ord t, Eq t) => [t] -> [t] -> [t] -> [t]
 mezclar_aux [] r q = q ++ r
 mezclar_aux (x:s) r q | r == [] = q ++ (x:s)
@@ -87,6 +100,7 @@ ms_aux (x:s)
 
 ms_rf :: (Ord t, Eq t) => [t] -> [t]
 ms_rf r = ms_aux [[y] | y <- r]
+------------------------------------------------------------------
 
 simplificacion :: Af -> Af
 simplificacion (q,a,tau,sigma,y)
@@ -217,15 +231,15 @@ pruebaAcep3 = do putStrLn "-----Caso de prueba 3----"
 
 pruebaAcep4 :: IO ()
 pruebaAcep4 = do putStrLn "-----Caso de prueba 4----"
-                 if ([0] == (aceptacion getAutomataN))
-                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0].\n\n"
-                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0].\n\n"
+                 if ([0,1] == (aceptacion getAutomataN))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0,1].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN son [0,1].\n\n"
 
 pruebaAcep5 :: IO ()
 pruebaAcep5 = do putStrLn "-----Caso de prueba 5----"
-                 if ([0,3,4,5,6,7,9,10] == (aceptacion getAutomataN3))
-                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,9,10].\n\n"
-                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,9,10].\n\n"
+                 if ([0,3,4,5,6,7,8,9,10] == (aceptacion getAutomataN3))
+                    then putStrLn "Correcto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,8,9,10].\n\n"
+                    else putStrLn "Incorrecto, los estados desde los cuales se puede alcanzar un estado de aceptación del automataN3 son [0,3,4,5,6,7,8,9,10].\n\n"
 
 pruebaSimpl1 :: IO ()
 pruebaSimpl1 = do putStrLn "-----Caso de prueba 1 (Automata D3)-----"
