@@ -2,7 +2,25 @@ import Tipos
 import Pruebas
 
 ----------------------Análisis del coste computacional----------------------
--- 
+-- El coste computacional del método determinista, es el número de estados multiplicado 
+-- por el número de simbolos del alfabeto, O(estados*simbolos).
+
+-- El coste computacional del método alcanzables en el peor de los casos es quasilineal 
+-- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+
+-- El coste computacional del método elim_repetidos es lineal con respecto al numero de 
+-- elementos de la lista.
+
+-- El coste computacional del método ms_rf es quasilinial con respecto número de elementos a ordenar.
+
+-- El coste computacional del método aceptación en el peor de los casos es quasilineal 
+-- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+
+-- El coste computacional del método simplificacion en el peor de los casos es quasilineal 
+-- con respecto al número de estados del automata, O(estados*(log2(estados) + constante)).
+
+-- En el peor de los casos de de los metódos anteriores se refiere a cuando se tienen que 
+-- recorrer todos los estados, porque existan transciones que lleven a todos los estados
 ----------------------------------------------------------------------------
 
 determinista :: Af -> Bool
@@ -14,7 +32,8 @@ determinista (q,a,tau,sigma,y)
 
 alcanzables :: Af -> Estado -> Estados
 alcanzables (q,a,tau,sigma,y) estActual = ms_rf (alcanzables_aux (q,a,tau,sigma,y) estActual [] [] [qf | (qin,simb,qf) <- tau, qin == estActual])
---Se devuelve la lista de todos los estados que se pueden alcanzar desde es estado estActual.
+--Se devuelve la lista ordenada de todos los estados que se pueden alcanzar desde es estado estActual.
+-- al final en la generacion de lista no se deberian de eliminar los repetidos??
 
 alcanzables_aux :: Af -> Estado -> Estados -> Estados -> Estados -> Estados
 alcanzables_aux (q,a,tau,sigma,y) estActual examinados resultado porExaminar
