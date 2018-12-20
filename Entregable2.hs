@@ -1,3 +1,5 @@
+module Entregable2 where
+
 import Tipos
 import Pruebas
 
