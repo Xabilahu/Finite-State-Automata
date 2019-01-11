@@ -1,4 +1,3 @@
--- import Pruebas
 import Tipos
 
 menu :: IO ()
