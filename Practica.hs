@@ -1,7 +1,8 @@
-import Pruebas
+-- import Pruebas
 import Tipos
 
 menu :: IO ()
+--Menu principal
 menu = do putStrLn "\n***Menú Principal***"
           putStrLn "Elige una opción:"
           putStrLn "1. Pertenencia de una palabra al lenguaje asociado a un AF."
